@@ -1,0 +1,57 @@
+[
+  {
+    "store_id": "ST1008",
+    "store_name": "Brigade_Bangalore",
+    "city": "Bangalore",
+    "open_hours": "10:00-22:00",
+    "cameras": {
+      "CAM_ENTRY_01": {
+        "type": "entry_exit",
+        "description": "Entry/exit threshold — left glass door",
+        "zones": {
+          "ENTRY_ZONE": [[0,0],[300,0],[300,1080],[0,1080]]
+        }
+      },
+      "CAM_FLOOR_01": {
+        "type": "floor",
+        "description": "Main floor — F.O.H coverage",
+        "zones": {
+          "SKINCARE_WALL":  [[0,0],[960,0],[960,300],[0,300]],
+          "FRAGRANCE":      [[0,300],[300,300],[300,700],[0,700]],
+          "NAIL":           [[300,300],[550,300],[550,700],[300,700]],
+          "FOH":            [[550,300],[1300,300],[1300,700],[550,700]],
+          "MAKEUP_UNIT":    [[1300,300],[1650,300],[1650,700],[1300,700]],
+          "MAKEUP_WALL":    [[0,700],[960,700],[960,1080],[0,1080]],
+          "PREMIUM_MAKEUP": [[960,700],[1920,700],[1920,1080],[960,1080]]
+        }
+      },
+      "CAM_BILLING_01": {
+        "type": "billing",
+        "description": "Cash counter — right side billing area",
+        "zones": {
+          "BILLING":    [[1500,100],[1920,100],[1920,800],[1500,800]],
+          "PMU":        [[1650,700],[1920,700],[1920,1080],[1650,1080]],
+          "ACCESSORIES":[[1500,0],[1920,0],[1920,100],[1500,100]]
+        }
+      }
+    },
+    "zone_categories": {
+      "SKINCARE_WALL":  "skin",
+      "FRAGRANCE":      "fragrance",
+      "NAIL":           "personal-care",
+      "FOH":            "floor",
+      "MAKEUP_UNIT":    "makeup",
+      "MAKEUP_WALL":    "makeup",
+      "PREMIUM_MAKEUP": "makeup",
+      "BILLING":        "billing",
+      "PMU":            "services",
+      "ACCESSORIES":    "accessories",
+      "ENTRY_ZONE":     "entry"
+    },
+    "brand_zones": {
+      "top_wall": ["EB_KOREAN", "THE_FACE_SHOP", "GOOD_VIBES", "DERMDOC", "MINIMALIST", "AQUALOGICA", "LAKME_SKIN", "ACCESSORIES"],
+      "bottom_wall": ["MAYBELLINE", "FACES_CANADA", "LAKME", "COLORBAR_SUGAR", "SWISS_BEAUTY", "RENEE_NY_BAE", "ALPS_GOODNESS", "STREAX"],
+      "center": ["FRAGRANCE", "NAIL", "MAKEUP_UNIT"]
+    }
+  }
+]

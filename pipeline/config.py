@@ -22,9 +22,9 @@ BILLING_ZONE_CORRELATION_WINDOW  = int(os.getenv("BILLING_ZONE_CORRELATION_WINDO
 MAX_BATCH_SIZE                   = int(os.getenv("MAX_BATCH_SIZE", "500"))
 
 # Camera and zone config
-ENTRY_EXIT_CAMERAS  = ["CAM_ENTRY_01", "CAM_ENTRY_02"]
-BILLING_ZONE_IDS    = ["BILLING", "BILLING_COUNTER", "CHECKOUT"]
-
+ENTRY_EXIT_CAMERAS  = ["CAM_ENTRY_01"]
+DEFAULT_STORE_ID    = "ST1008"
+BILLING_ZONE_IDS    = ["BILLING", "BILLING_COUNTER", "CHECKOUT", "CASH_COUNTER"]
 # Staff detection — uniform HSV color ranges (saffron/orange typical retail uniform)
 # These are tunable per store deployment
 STAFF_UNIFORM_HSV_LOWER = (5,  100, 100)

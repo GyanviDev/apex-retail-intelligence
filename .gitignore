@@ -18,3 +18,13 @@ data/pos/
 .pytest_cache/
 __pycache__/
 *.pyc
+# Temporary scripts
+read_layout.py
+read_layout2.py
+extract_images.py
+
+# Dataset files (not for repo)
+data/store_layout.xlsx
+docs/evaluation_framework.pdf
+docs/store_layout_image_1.png
+docs/store_layout_image_2.png
