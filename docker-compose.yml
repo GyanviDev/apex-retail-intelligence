@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: store-intelligence-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=sqlite:///./data/store_intelligence.db
+      - CONFIDENCE_THRESHOLD=0.35
+      - IOU_THRESHOLD=0.45
+      - REENTRY_WINDOW_SECONDS=300
+      - STAFF_EXCLUSION_ENABLED=true
+      - MAX_BATCH_SIZE=500
+      - DWELL_EMIT_INTERVAL_SECONDS=30
+      - BILLING_ZONE_CORRELATION_WINDOW=300
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
