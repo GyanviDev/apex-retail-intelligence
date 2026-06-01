@@ -13,7 +13,7 @@ Funnel stages:
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select, distinct
 from app.models import EventRecord, EventType
@@ -22,8 +22,14 @@ logger = logging.getLogger(__name__)
 
 
 def _today_range():
+    """
+    60-day lookback window to support historical video datasets
+    where event timestamps reflect recording date (2026-04-10),
+    not wall-clock date. In production with live CCTV feeds this
+    would be narrowed to same-day or same-shift range.
+    """
     now   = datetime.now(timezone.utc)
-    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    start = now - timedelta(days=60)
     return start.replace(tzinfo=None), now.replace(tzinfo=None)
 
 
@@ -31,19 +37,19 @@ def get_funnel(db: Session, store_id: str) -> dict:
     """
     Compute conversion funnel for a store.
 
-    Stage 1 — Entry:
-        Unique visitor_ids with ENTRY event today (excludes staff).
+    Stage 1 - Entry:
+        Unique visitor_ids with ENTRY event (excludes staff).
         Re-entries use same visitor_id so never double-counted.
 
-    Stage 2 — Zone Visit:
-        Unique visitor_ids with at least one ZONE_ENTER event today.
+    Stage 2 - Zone Visit:
+        Unique visitor_ids with at least one ZONE_ENTER event.
         Subset of Stage 1.
 
-    Stage 3 — Billing Queue:
-        Unique visitor_ids with BILLING_QUEUE_JOIN event today.
+    Stage 3 - Billing Queue:
+        Unique visitor_ids with BILLING_QUEUE_JOIN event.
         Subset of Stage 2.
 
-    Stage 4 — Purchase (proxy):
+    Stage 4 - Purchase (proxy):
         Unique visitor_ids with BILLING_QUEUE_JOIN but NO
         BILLING_QUEUE_ABANDON — i.e. they stayed and presumably purchased.
         True purchase correlation requires POS data loaded separately.
@@ -52,7 +58,7 @@ def get_funnel(db: Session, store_id: str) -> dict:
     """
     start, end = _today_range()
 
-    # ── Stage 1: Entry ────────────────────────────────────────────────────
+    # -- Stage 1: Entry -------------------------------------------------------
     stage1 = db.execute(
         select(func.count(distinct(EventRecord.visitor_id)))
         .where(
@@ -64,7 +70,7 @@ def get_funnel(db: Session, store_id: str) -> dict:
         )
     ).scalar() or 0
 
-    # ── Stage 2: Zone Visit ───────────────────────────────────────────────
+    # -- Stage 2: Zone Visit --------------------------------------------------
     stage2 = db.execute(
         select(func.count(distinct(EventRecord.visitor_id)))
         .where(
@@ -80,7 +86,7 @@ def get_funnel(db: Session, store_id: str) -> dict:
     # without a corresponding entry (camera overlap edge case)
     stage2 = min(stage2, stage1)
 
-    # ── Stage 3: Billing Queue ────────────────────────────────────────────
+    # -- Stage 3: Billing Queue -----------------------------------------------
     stage3 = db.execute(
         select(func.count(distinct(EventRecord.visitor_id)))
         .where(
@@ -94,7 +100,7 @@ def get_funnel(db: Session, store_id: str) -> dict:
 
     stage3 = min(stage3, stage2)
 
-    # ── Stage 4: Purchase (proxy) ─────────────────────────────────────────
+    # -- Stage 4: Purchase (proxy) --------------------------------------------
     # Visitors who abandoned billing queue
     abandoned = db.execute(
         select(func.count(distinct(EventRecord.visitor_id)))
@@ -109,15 +115,15 @@ def get_funnel(db: Session, store_id: str) -> dict:
 
     stage4 = max(0, stage3 - abandoned)
 
-    # ── Drop-off calculation ──────────────────────────────────────────────
+    # -- Drop-off calculation -------------------------------------------------
     def dropoff(prev: int, curr: int) -> float:
         if prev == 0:
             return 0.0
         return round((prev - curr) / prev * 100, 2)
 
     return {
-        "store_id":  store_id,
-        "as_of":     datetime.now(timezone.utc).isoformat(),
+        "store_id": store_id,
+        "as_of":    datetime.now(timezone.utc).isoformat(),
         "stages": [
             {
                 "stage":       "ENTRY",

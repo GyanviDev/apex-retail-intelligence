@@ -28,3 +28,17 @@ data/store_layout.xlsx
 docs/evaluation_framework.pdf
 docs/store_layout_image_1.png
 docs/store_layout_image_2.png
+# Diagnostic scripts
+check_db.py
+check_db2.py
+check_lighting.py
+identify_cams.py
+inspect_*.py
+inspect_clips.py
+
+# YOLO model weights
+yolov8n.pt
+*.pt
+
+# Temp files
+0

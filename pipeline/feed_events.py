@@ -60,7 +60,7 @@ def feed_file(api_base: str, jsonl_path: str, batch_size: int = 500):
         duplicate += result.get("duplicate", 0)
 
         pct = min(100, (i + len(batch)) / total * 100)
-        print(f"  [{pct:5.1f}%] Sent {i+len(batch)}/{total} — "
+        print(f"  [{pct:5.1f}%] Sent {i+len(batch)}/{total} | "
               f"accepted={accepted} rejected={rejected} dup={duplicate}")
 
     print(f"[DONE] {jsonl_path}: "
@@ -107,13 +107,21 @@ def main():
     print(f"[INFO] Found {len(files)} event file(s) for {args.store}")
     print(f"[INFO] API: {args.api}")
 
-    # Verify API is reachable
+    # Verify API is reachable — accept 503 (no data yet) as healthy
+    # Only abort if connection is refused or times out entirely
     try:
         with urllib.request.urlopen(
             f"{args.api}/health", timeout=5
         ) as resp:
             health = json.loads(resp.read().decode())
             print(f"[INFO] API status: {health.get('status', 'UNKNOWN')}")
+    except urllib.error.HTTPError as e:
+        if e.code == 503:
+            # 503 means API is running but no store data yet — this is fine
+            print(f"[INFO] API is running (no store data yet — will ingest now)")
+        else:
+            print(f"[ERROR] API returned unexpected error: {e}")
+            return
     except Exception as e:
         print(f"[ERROR] API not reachable at {args.api}: {e}")
         return

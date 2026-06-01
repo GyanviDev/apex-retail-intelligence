@@ -6,7 +6,7 @@ Shows real-time store metrics updating as events flow in.
 Uses the `rich` library for a professional terminal UI.
 
 Usage:
-    python dashboard/dashboard.py --store STORE_BLR_002 --api http://localhost:8000
+    python dashboard/dashboard.py --store ST1008 --api http://localhost:8000
 """
 
 import time
@@ -70,7 +70,6 @@ def build_metrics_panel(metrics: dict) -> Panel:
                   f"{abandon.get('abandon_count',0)} / "
                   f"{abandon.get('join_count',0)}")
 
-    # Queue depths
     if queue:
         for zone, depth in queue.items():
             color = "red" if depth >= 10 else "yellow" if depth >= 5 else "green"
@@ -86,7 +85,7 @@ def build_funnel_panel(funnel: dict) -> Panel:
     if not funnel:
         return Panel("[red]No funnel data[/red]", title="Funnel")
 
-    stages = funnel.get("stages", [])
+    stages  = funnel.get("stages", [])
     overall = funnel.get("overall_conversion_pct", 0.0)
 
     table = Table(show_header=True, box=None, padding=(0, 1))
@@ -98,12 +97,12 @@ def build_funnel_panel(funnel: dict) -> Panel:
     max_count = max((s.get("count", 0) for s in stages), default=1) or 1
 
     for stage in stages:
-        count    = stage.get("count", 0)
-        dropoff  = stage.get("dropoff_pct", 0.0)
-        label    = stage.get("label", stage.get("stage", ""))
-        bar_len  = int((count / max_count) * 18)
-        bar      = "█" * bar_len + "░" * (18 - bar_len)
-        d_color  = "red" if dropoff > 40 else "yellow" if dropoff > 20 else "green"
+        count   = stage.get("count", 0)
+        dropoff = stage.get("dropoff_pct", 0.0)
+        label   = stage.get("label", stage.get("stage", ""))
+        bar_len = int((count / max_count) * 18)
+        bar     = "█" * bar_len + "░" * (18 - bar_len)
+        d_color = "red" if dropoff > 40 else "yellow" if dropoff > 20 else "green"
 
         table.add_row(
             label,
@@ -118,6 +117,8 @@ def build_funnel_panel(funnel: dict) -> Panel:
               f"[dim](overall: {overall:.1f}%)[/dim]",
         border_style="blue",
     )
+
+
 def build_heatmap_panel(heatmap: dict) -> Panel:
     """Build the zone heatmap panel."""
     if not heatmap or not heatmap.get("zones"):
@@ -140,11 +141,11 @@ def build_heatmap_panel(heatmap: dict) -> Panel:
     )
 
     for zone_id, data in sorted_zones:
-        score    = data.get("normalised_score", 0)
-        visits   = data.get("visit_count", 0)
-        dwell_s  = data.get("avg_dwell_ms", 0) / 1000
-        bar_len  = int(score / 5)
-        bar      = "█" * bar_len + "░" * (20 - bar_len)
+        score   = data.get("normalised_score", 0)
+        visits  = data.get("visit_count", 0)
+        dwell_s = data.get("avg_dwell_ms", 0) / 1000
+        bar_len = int(score / 5)
+        bar     = "█" * bar_len + "░" * (20 - bar_len)
         heat_color = (
             "red"    if score >= 80 else
             "yellow" if score >= 50 else
@@ -272,7 +273,7 @@ def main():
     )
     parser.add_argument(
         "--store",
-        default = "STORE_BLR_002",
+        default = "ST1008",
         help    = "Store ID to monitor",
     )
     parser.add_argument(

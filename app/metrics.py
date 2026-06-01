@@ -21,14 +21,20 @@ logger = logging.getLogger(__name__)
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _today_range():
-    """Return (start, end) for today in UTC as naive datetimes for SQLite."""
+    """
+    Return (start, end) time window for metric queries.
+    Uses a 60-day lookback window to support historical video datasets
+    where event timestamps reflect recording date (2026-04-10),
+    not wall-clock date. In production with live CCTV feeds this
+    window would be narrowed to same-day or same-shift range.
+    """
     now   = datetime.now(timezone.utc)
-    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    start = now - timedelta(days=60)
     return start.replace(tzinfo=None), now.replace(tzinfo=None)
 
 
 def _customer_base_query(db: Session, store_id: str):
-    """Base filter: this store, today, not staff."""
+    """Base filter: this store, lookback window, not staff."""
     start, end = _today_range()
     return db.query(EventRecord).filter(
         EventRecord.store_id  == store_id,
@@ -42,18 +48,18 @@ def _customer_base_query(db: Session, store_id: str):
 
 def get_unique_visitors(db: Session, store_id: str) -> int:
     """
-    Count unique customer visitor_ids with at least one ENTRY event today.
+    Count unique customer visitor_ids with at least one ENTRY event.
     Re-entries use the same visitor_id so they are NOT double-counted.
     """
     start, end = _today_range()
     result = db.execute(
         select(func.count(distinct(EventRecord.visitor_id)))
         .where(
-            EventRecord.store_id  == store_id,
-            EventRecord.is_staff  == False,
+            EventRecord.store_id   == store_id,
+            EventRecord.is_staff   == False,
             EventRecord.event_type == EventType.ENTRY,
-            EventRecord.timestamp >= start,
-            EventRecord.timestamp <= end,
+            EventRecord.timestamp  >= start,
+            EventRecord.timestamp  <= end,
         )
     ).scalar()
     return result or 0
@@ -64,10 +70,10 @@ def get_unique_visitors(db: Session, store_id: str) -> int:
 def get_conversion_rate(db: Session, store_id: str,
                         pos_df=None) -> dict:
     """
-    Conversion = visitors who had a BILLING_QUEUE_JOIN or were in billing
-    zone within 5 minutes of a POS transaction / total unique visitors.
+    Conversion = visitors who had a BILLING_QUEUE_JOIN
+    divided by total unique visitors.
 
-    If pos_df is None, uses BILLING_QUEUE_JOIN as proxy for purchase intent.
+    Uses BILLING_QUEUE_JOIN as proxy for purchase intent.
     Returns dict with rate, converted_count, total_visitors.
     """
     total = get_unique_visitors(db, store_id)
@@ -81,17 +87,14 @@ def get_conversion_rate(db: Session, store_id: str,
 
     start, end = _today_range()
 
-    # Visitors who reached billing zone
     converted = db.execute(
         select(func.count(distinct(EventRecord.visitor_id)))
         .where(
-            EventRecord.store_id  == store_id,
-            EventRecord.is_staff  == False,
-            EventRecord.event_type.in_([
-                EventType.BILLING_QUEUE_JOIN,
-            ]),
-            EventRecord.timestamp >= start,
-            EventRecord.timestamp <= end,
+            EventRecord.store_id   == store_id,
+            EventRecord.is_staff   == False,
+            EventRecord.event_type.in_([EventType.BILLING_QUEUE_JOIN]),
+            EventRecord.timestamp  >= start,
+            EventRecord.timestamp  <= end,
         )
     ).scalar() or 0
 
@@ -120,20 +123,20 @@ def get_avg_dwell_per_zone(db: Session, store_id: str) -> dict:
             func.count(EventRecord.event_id).label("sample_count"),
         )
         .where(
-            EventRecord.store_id  == store_id,
-            EventRecord.is_staff  == False,
+            EventRecord.store_id   == store_id,
+            EventRecord.is_staff   == False,
             EventRecord.event_type == EventType.ZONE_DWELL,
-            EventRecord.zone_id   != None,
-            EventRecord.timestamp >= start,
-            EventRecord.timestamp <= end,
+            EventRecord.zone_id    != None,
+            EventRecord.timestamp  >= start,
+            EventRecord.timestamp  <= end,
         )
         .group_by(EventRecord.zone_id)
     ).fetchall()
 
     return {
         row.zone_id: {
-            "avg_dwell_ms":  round(row.avg_dwell or 0, 2),
-            "sample_count":  row.sample_count,
+            "avg_dwell_ms": round(row.avg_dwell or 0, 2),
+            "sample_count": row.sample_count,
         }
         for row in rows
     }
@@ -145,37 +148,34 @@ def get_current_queue_depth(db: Session, store_id: str) -> dict:
     """
     Current billing queue depth per zone.
     Computed as: visitors who joined queue but have not exited billing zone.
-    Uses last 30 minutes of events for recency.
+    Uses full lookback window to capture historical dataset queue state.
     """
-    now   = datetime.now(timezone.utc).replace(tzinfo=None)
-    start = (datetime.now(timezone.utc) - timedelta(minutes=30)).replace(tzinfo=None)
+    start, end = _today_range()
 
-    # Visitors who joined billing queue recently
     joined = db.execute(
         select(
             EventRecord.zone_id,
             func.count(distinct(EventRecord.visitor_id)).label("count")
         )
         .where(
-            EventRecord.store_id  == store_id,
-            EventRecord.is_staff  == False,
+            EventRecord.store_id   == store_id,
+            EventRecord.is_staff   == False,
             EventRecord.event_type == EventType.BILLING_QUEUE_JOIN,
-            EventRecord.timestamp >= start,
+            EventRecord.timestamp  >= start,
         )
         .group_by(EventRecord.zone_id)
     ).fetchall()
 
-    # Visitors who exited billing zone recently
     exited = db.execute(
         select(
             EventRecord.zone_id,
             func.count(distinct(EventRecord.visitor_id)).label("count")
         )
         .where(
-            EventRecord.store_id  == store_id,
-            EventRecord.is_staff  == False,
+            EventRecord.store_id   == store_id,
+            EventRecord.is_staff   == False,
             EventRecord.event_type == EventType.ZONE_EXIT,
-            EventRecord.timestamp >= start,
+            EventRecord.timestamp  >= start,
         )
         .group_by(EventRecord.zone_id)
     ).fetchall()
@@ -203,22 +203,22 @@ def get_abandonment_rate(db: Session, store_id: str) -> dict:
     joins = db.execute(
         select(func.count(EventRecord.event_id))
         .where(
-            EventRecord.store_id  == store_id,
-            EventRecord.is_staff  == False,
+            EventRecord.store_id   == store_id,
+            EventRecord.is_staff   == False,
             EventRecord.event_type == EventType.BILLING_QUEUE_JOIN,
-            EventRecord.timestamp >= start,
-            EventRecord.timestamp <= end,
+            EventRecord.timestamp  >= start,
+            EventRecord.timestamp  <= end,
         )
     ).scalar() or 0
 
     abandons = db.execute(
         select(func.count(EventRecord.event_id))
         .where(
-            EventRecord.store_id  == store_id,
-            EventRecord.is_staff  == False,
+            EventRecord.store_id   == store_id,
+            EventRecord.is_staff   == False,
             EventRecord.event_type == EventType.BILLING_QUEUE_ABANDON,
-            EventRecord.timestamp >= start,
-            EventRecord.timestamp <= end,
+            EventRecord.timestamp  >= start,
+            EventRecord.timestamp  <= end,
         )
     ).scalar() or 0
 
@@ -237,7 +237,7 @@ def get_heatmap(db: Session, store_id: str) -> dict:
     Zone visit frequency + avg dwell, normalised 0-100.
     Includes data_confidence flag if fewer than 20 sessions.
     """
-    start, end   = _today_range()
+    start, end     = _today_range()
     total_visitors = get_unique_visitors(db, store_id)
     low_confidence = total_visitors < 20
 
@@ -248,12 +248,12 @@ def get_heatmap(db: Session, store_id: str) -> dict:
             func.avg(EventRecord.dwell_ms).label("avg_dwell"),
         )
         .where(
-            EventRecord.store_id  == store_id,
-            EventRecord.is_staff  == False,
+            EventRecord.store_id   == store_id,
+            EventRecord.is_staff   == False,
             EventRecord.event_type == EventType.ZONE_ENTER,
-            EventRecord.zone_id   != None,
-            EventRecord.timestamp >= start,
-            EventRecord.timestamp <= end,
+            EventRecord.zone_id    != None,
+            EventRecord.timestamp  >= start,
+            EventRecord.timestamp  <= end,
         )
         .group_by(EventRecord.zone_id)
     ).fetchall()
@@ -270,8 +270,8 @@ def get_heatmap(db: Session, store_id: str) -> dict:
     for row in rows:
         normalised = round((row.visit_count / max_visits) * 100, 1)
         zones[row.zone_id] = {
-            "visit_count":    row.visit_count,
-            "avg_dwell_ms":   round(row.avg_dwell or 0, 2),
+            "visit_count":      row.visit_count,
+            "avg_dwell_ms":     round(row.avg_dwell or 0, 2),
             "normalised_score": normalised,
         }
 
@@ -289,11 +289,11 @@ def get_store_metrics(db: Session, store_id: str) -> dict:
     Never returns null — every field has a safe zero default.
     """
     return {
-        "store_id":        store_id,
-        "as_of":           datetime.now(timezone.utc).isoformat(),
-        "unique_visitors": get_unique_visitors(db, store_id),
-        "conversion":      get_conversion_rate(db, store_id),
+        "store_id":           store_id,
+        "as_of":              datetime.now(timezone.utc).isoformat(),
+        "unique_visitors":    get_unique_visitors(db, store_id),
+        "conversion":         get_conversion_rate(db, store_id),
         "avg_dwell_per_zone": get_avg_dwell_per_zone(db, store_id),
-        "queue_depth":     get_current_queue_depth(db, store_id),
-        "abandonment":     get_abandonment_rate(db, store_id),
+        "queue_depth":        get_current_queue_depth(db, store_id),
+        "abandonment":        get_abandonment_rate(db, store_id),
     }

@@ -14,7 +14,7 @@
       },
       "CAM_FLOOR_01": {
         "type": "floor",
-        "description": "Main floor — F.O.H coverage",
+        "description": "Main floor — F.O.H coverage, skincare wall",
         "zones": {
           "SKINCARE_WALL":  [[0,0],[960,0],[960,300],[0,300]],
           "FRAGRANCE":      [[0,300],[300,300],[300,700],[0,700]],
@@ -25,28 +25,46 @@
           "PREMIUM_MAKEUP": [[960,700],[1920,700],[1920,1080],[960,1080]]
         }
       },
+      "CAM_FLOOR_02": {
+    "type": "floor",
+    "description": "Makeup wall — Lakme, Faces Canada, Maybelline",
+    "zones": {
+        "LAKME_WALL":         [[0,200],[640,200],[640,700],[0,700]],
+        "FACES_CANADA_WALL":  [[640,200],[1280,200],[1280,700],[640,700]],
+        "MAYBELLINE_WALL":    [[1280,200],[1920,200],[1920,700],[1280,700]],
+        "MAKEUP_FLOOR_LEFT":  [[0,700],[640,700],[640,1080],[0,1080]],
+        "MAKEUP_FLOOR_MID":   [[640,700],[1280,700],[1280,1080],[640,1080]],
+        "MAKEUP_FLOOR_RIGHT": [[1280,700],[1920,700],[1920,1080],[1280,1080]]
+    }
+},
       "CAM_BILLING_01": {
-        "type": "billing",
-        "description": "Cash counter — right side billing area",
-        "zones": {
-          "BILLING":    [[1500,100],[1920,100],[1920,800],[1500,800]],
-          "PMU":        [[1650,700],[1920,700],[1920,1080],[1650,1080]],
-          "ACCESSORIES":[[1500,0],[1920,0],[1920,100],[1500,100]]
-        }
-      }
+    "type": "billing",
+    "description": "Cash counter — right side billing area",
+    "zones": {
+        "BILLING":     [[0,0],[1920,0],[1920,1080],[0,1080]],
+        "PMU":         [[1400,700],[1920,700],[1920,1080],[1400,1080]],
+        "ACCESSORIES": [[800,0],[1920,0],[1920,100],[800,100]]
+    }
+}
     },
     "zone_categories": {
-      "SKINCARE_WALL":  "skin",
-      "FRAGRANCE":      "fragrance",
-      "NAIL":           "personal-care",
-      "FOH":            "floor",
-      "MAKEUP_UNIT":    "makeup",
-      "MAKEUP_WALL":    "makeup",
-      "PREMIUM_MAKEUP": "makeup",
-      "BILLING":        "billing",
-      "PMU":            "services",
-      "ACCESSORIES":    "accessories",
-      "ENTRY_ZONE":     "entry"
+      "SKINCARE_WALL":      "skin",
+      "FRAGRANCE":          "fragrance",
+      "NAIL":               "personal-care",
+      "FOH":                "floor",
+      "MAKEUP_UNIT":        "makeup",
+      "MAKEUP_WALL":        "makeup",
+      "PREMIUM_MAKEUP":     "makeup",
+      "LAKME_WALL":         "makeup",
+      "FACES_CANADA_WALL":  "makeup",
+      "MAYBELLINE_WALL":    "makeup",
+      "MAKEUP_FLOOR_LEFT":  "makeup",
+      "MAKEUP_FLOOR_MID":   "makeup",
+      "MAKEUP_FLOOR_RIGHT": "makeup",
+      "BILLING":            "billing",
+      "PMU":                "services",
+      "ACCESSORIES":        "accessories",
+      "ENTRY_ZONE":         "entry"
     },
     "brand_zones": {
       "top_wall": ["EB_KOREAN", "THE_FACE_SHOP", "GOOD_VIBES", "DERMDOC", "MINIMALIST", "AQUALOGICA", "LAKME_SKIN", "ACCESSORIES"],
