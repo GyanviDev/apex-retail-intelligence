@@ -1,6 +1,6 @@
-\# Store Intelligence System
+# Store Intelligence System
 
-\## Purplle Tech Challenge 2026
+## Purplle Tech Challenge 2026
 
 
 
@@ -12,37 +12,37 @@ An end-to-end retail analytics pipeline: raw CCTV footage → live store metrics
 
 
 
-\## Quick Start (5 commands)
+## Quick Start (5 commands)
 
 
 
 ```bash
 
-\# 1. Clone and enter
+# 1. Clone and enter
 
 git clone <your-repo-url> store-intelligence \&\& cd store-intelligence
 
 
 
-\# 2. Start the API
+# 2. Start the API
 
 docker compose up --build
 
 
 
-\# 3. Verify health
+# 3. Verify health
 
 curl http://localhost:8000/health
 
 
 
-\# 4. Verify metrics endpoint
+# 4. Verify metrics endpoint
 
 curl http://localhost:8000/stores/STORE\_BLR\_002/metrics
 
 
 
-\# 5. Run tests
+# 5. Run tests
 
 docker compose exec api pytest tests/ -v
 
@@ -60,11 +60,11 @@ Interactive docs at `http://localhost:8000/docs`.
 
 
 
-\## Running the Detection Pipeline
+## Running the Detection Pipeline
 
 
 
-\### Setup (one time)
+### Setup (one time)
 
 ```bash
 
@@ -78,7 +78,7 @@ pip install -r requirements.txt
 
 
 
-\### Process a single clip
+### Process a single clip
 
 ```bash
 
@@ -100,7 +100,7 @@ python -m pipeline.detect \\
 
 
 
-\### Process all clips at once
+### Process all clips at once
 
 ```bash
 
@@ -114,7 +114,7 @@ Events are written to `data/events/` as `.jsonl` files.
 
 
 
-\### Feed events into the API
+### Feed events into the API
 
 ```bash
 
@@ -168,7 +168,7 @@ for i in range(0, len(events), 500):
 
 
 
-\## Live Dashboard (Part E)
+## Live Dashboard (Part E)
 
 
 
@@ -198,7 +198,7 @@ The dashboard refreshes every 5 seconds showing:
 
 
 
-\## API Endpoints
+## API Endpoints
 
 
 
@@ -228,7 +228,7 @@ Full interactive docs: `http://localhost:8000/docs`
 
 
 
-\## Running Tests
+## Running Tests
 
 
 
@@ -250,7 +250,7 @@ pytest tests/ -v
 
 
 
-\## Project Structure
+## Project Structure
 
 
 
@@ -322,7 +322,7 @@ store-intelligence/
 
 
 
-\## Edge Cases Handled
+## Edge Cases Handled
 
 
 
@@ -350,7 +350,7 @@ store-intelligence/
 
 
 
-\## Architecture Decisions
+## Architecture Decisions
 
 
 
