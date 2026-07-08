@@ -2,361 +2,225 @@
 
 ## Purplle Tech Challenge 2026
 
+An end-to-end retail analytics pipeline that transforms raw CCTV footage into live retail analytics through a real-time metrics API.
 
+---
 
-An end-to-end retail analytics pipeline: raw CCTV footage → live store metrics API.
-
-
-
-\---
-
-
-
-## Quick Start (5 commands)
-
-
+# Quick Start (5 Commands)
 
 ```bash
-
-# 1. Clone and enter
-
-git clone <your-repo-url> store-intelligence \&\& cd store-intelligence
-
-
+# 1. Clone the repository
+git clone <your-repo-url> store-intelligence
+cd store-intelligence
 
 # 2. Start the API
-
 docker compose up --build
 
-
-
 # 3. Verify health
-
 curl http://localhost:8000/health
 
-
-
 # 4. Verify metrics endpoint
-
-curl http://localhost:8000/stores/STORE\_BLR\_002/metrics
-
-
+curl http://localhost:8000/stores/STORE_BLR_002/metrics
 
 # 5. Run tests
-
 docker compose exec api pytest tests/ -v
-
 ```
 
+After starting the services, the API will be available at:
 
+- **API:** http://localhost:8000
+- **Swagger Docs:** http://localhost:8000/docs
 
-The API is live at `http://localhost:8000` after step 2.
+---
 
-Interactive docs at `http://localhost:8000/docs`.
+# Running the Detection Pipeline
 
-
-
-\---
-
-
-
-## Running the Detection Pipeline
-
-
-
-### Setup (one time)
+## One-Time Setup
 
 ```bash
-
 conda create -n purplle python=3.11 -y
-
 conda activate purplle
-
 pip install -r requirements.txt
-
 ```
 
-
-
-### Process a single clip
+## Process a Single Video Clip
 
 ```bash
-
-python -m pipeline.detect \\
-
-&#x20; --clip    data/clips/store\_blr\_002\_entry.mp4 \\
-
-&#x20; --store   STORE\_BLR\_002 \\
-
-&#x20; --camera  CAM\_ENTRY\_01 \\
-
-&#x20; --layout  data/store\_layout.json \\
-
-&#x20; --output  data/events/STORE\_BLR\_002\_CAM\_ENTRY\_01.jsonl \\
-
-&#x20; --start   2026-03-03T09:00:00Z
-
+python -m pipeline.detect \
+  --clip data/clips/store_blr_002_entry.mp4 \
+  --store STORE_BLR_002 \
+  --camera CAM_ENTRY_01 \
+  --layout data/store_layout.json \
+  --output data/events/STORE_BLR_002_CAM_ENTRY_01.jsonl \
+  --start 2026-03-03T09:00:00Z
 ```
 
-
-
-### Process all clips at once
+## Process All Clips
 
 ```bash
-
 bash pipeline/run.sh
-
 ```
 
+Generated event files are written to:
 
+```
+data/events/
+```
 
-Events are written to `data/events/` as `.jsonl` files.
+---
 
-
-
-### Feed events into the API
+# Feed Events into the API
 
 ```bash
-
-\# The pipeline writes events to data/events/\*.jsonl
-
-\# Feed them into the API:
-
 python -c "
+import json
+import urllib.request
 
-import json, urllib.request
-
-
-
-with open('data/events/STORE\_BLR\_002\_CAM\_ENTRY\_01.jsonl') as f:
-
-&#x20;   events = \[json.loads(line) for line in f if line.strip()]
-
-
-
-\# Send in batches of 500
+with open('data/events/STORE_BLR_002_CAM_ENTRY_01.jsonl') as f:
+    events = [json.loads(line) for line in f if line.strip()]
 
 for i in range(0, len(events), 500):
+    batch = events[i:i+500]
+    data = json.dumps({'events': batch}).encode()
 
-&#x20;   batch = events\[i:i+500]
+    req = urllib.request.Request(
+        'http://localhost:8000/events/ingest',
+        data=data,
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
 
-&#x20;   data  = json.dumps({'events': batch}).encode()
-
-&#x20;   req   = urllib.request.Request(
-
-&#x20;       'http://localhost:8000/events/ingest',
-
-&#x20;       data    = data,
-
-&#x20;       headers = {'Content-Type': 'application/json'},
-
-&#x20;       method  = 'POST',
-
-&#x20;   )
-
-&#x20;   with urllib.request.urlopen(req) as resp:
-
-&#x20;       print(json.loads(resp.read()))
-
+    with urllib.request.urlopen(req) as resp:
+        print(json.loads(resp.read()))
 "
-
 ```
 
+The ingestion endpoint accepts batches of up to **500 events** and is **idempotent**.
 
+---
 
-\---
+# Live Dashboard (Part E)
 
-
-
-## Live Dashboard (Part E)
-
-
-
-Start the API first, then run:
+Start the API, then launch the dashboard:
 
 ```bash
-
-python dashboard/dashboard.py --store STORE\_BLR\_002 --api http://localhost:8000
-
+python dashboard/dashboard.py \
+  --store STORE_BLR_002 \
+  --api http://localhost:8000
 ```
 
+The dashboard refreshes every **5 seconds** and displays:
 
+- Real-time visitor metrics
+- Conversion rate
+- Queue depth
+- Conversion funnel with drop-off percentages
+- Zone heatmap with dwell times
+- Active anomalies with severity and suggested actions
 
-The dashboard refreshes every 5 seconds showing:
+---
 
-\- Real-time metrics (visitors, conversion rate, queue depth)
-
-\- Conversion funnel with drop-off percentages
-
-\- Zone heatmap with dwell times
-
-\- Active anomalies with severity and suggested actions
-
-
-
-\---
-
-
-
-## API Endpoints
-
-
+# API Endpoints
 
 | Method | Endpoint | Description |
-
-|---|---|---|
-
-| POST | `/events/ingest` | Ingest batch of events (max 500, idempotent) |
-
-| GET | `/stores/{id}/metrics` | Unique visitors, conversion, dwell, queue |
-
+|--------|----------|-------------|
+| POST | `/events/ingest` | Ingest a batch of events (max 500, idempotent) |
+| GET | `/stores/{id}/metrics` | Visitor count, conversion, dwell time, queue depth |
 | GET | `/stores/{id}/funnel` | Entry → Zone → Billing → Purchase funnel |
+| GET | `/stores/{id}/heatmap` | Zone visit frequency normalized to 0–100 |
+| GET | `/stores/{id}/anomalies` | Queue spikes, conversion drops, dead zones |
+| GET | `/health` | Service health and event feed freshness |
 
-| GET | `/stores/{id}/heatmap` | Zone visit frequency normalised 0-100 |
-
-| GET | `/stores/{id}/anomalies` | Queue spike, conversion drop, dead zones |
-
-| GET | `/health` | Service status + feed freshness per store |
-
-
-
-Full interactive docs: `http://localhost:8000/docs`
-
-
-
-\---
-
-
-
-## Running Tests
-
-
-
-```bash
-
-\# With coverage report
-
-pytest tests/ -v
-
-
-
-\# Expected: 20 passed, coverage >80%
+Interactive API documentation:
 
 ```
+http://localhost:8000/docs
+```
 
+---
 
+# Running Tests
 
-\---
+```bash
+# Run all tests
+pytest tests/ -v
 
+# With Docker
+docker compose exec api pytest tests/ -v
+```
 
+Expected result:
 
-## Project Structure
+- ✅ 20 tests passing
+- ✅ >80% code coverage
 
+---
 
+# Project Structure
 
+```text
 store-intelligence/
-
-├── pipeline/
-
-│   ├── detect.py      # Main detection + tracking script
-
-│   ├── tracker.py     # Re-ID / ByteTrack / zone assignment
-
-│   ├── emit.py        # Event schema + emission
-
-│   ├── config.py      # All tunable parameters
-
-│   └── run.sh         # One command to process all clips
-
 ├── app/
-
-│   ├── main.py        # FastAPI entrypoint + middleware
-
-│   ├── models.py      # Pydantic schema + SQLAlchemy models
-
-│   ├── ingestion.py   # Ingest, validate, deduplicate
-
-│   ├── metrics.py     # Real-time metric computation
-
-│   ├── funnel.py      # Funnel + session logic
-
-│   ├── anomalies.py   # Anomaly detection (3 types)
-
-│   └── health.py      # Health + feed freshness
-
-├── tests/
-
-│   ├── test\_ingestion.py   # 11 tests — schema, idempotency, edge cases
-
-│   └── test\_anomalies.py   # 9 tests  — all 3 anomaly detectors
-
-├── docs/
-
-│   ├── DESIGN.md      # Architecture + AI-assisted decisions
-
-│   └── CHOICES.md     # 3 decisions with full reasoning
-
+│   ├── main.py              # FastAPI entrypoint
+│   ├── models.py            # Pydantic + SQLAlchemy models
+│   ├── ingestion.py         # Validation & deduplication
+│   ├── metrics.py           # Live metric computation
+│   ├── funnel.py            # Funnel logic
+│   ├── anomalies.py         # Anomaly detection
+│   └── health.py            # Health endpoints
+│
+├── pipeline/
+│   ├── detect.py            # Detection pipeline
+│   ├── tracker.py           # Tracking & Re-ID
+│   ├── emit.py              # Event emission
+│   ├── config.py            # Configuration
+│   └── run.sh               # Batch processing script
+│
 ├── dashboard/
-
-│   └── dashboard.py   # Live terminal dashboard (Part E)
-
+│   └── dashboard.py         # Live terminal dashboard
+│
+├── tests/
+│   ├── test_ingestion.py
+│   └── test_anomalies.py
+│
+├── docs/
+│   ├── DESIGN.md
+│   └── CHOICES.md
+│
 ├── data/
-
-│   ├── clips/         # CCTV video files (not in repo)
-
-│   ├── events/        # Generated .jsonl event files (not in repo)
-
-│   └── pos/           # POS transaction CSV (not in repo)
-
+│   ├── clips/
+│   ├── events/
+│   └── pos/
+│
 ├── Dockerfile
-
 ├── docker-compose.yml
-
 ├── requirements.txt
+├── .env
+└── README.md
+```
 
-└── .env
+---
 
-
-
-\---
-
-
-
-## Edge Cases Handled
-
-
+# Edge Cases Handled
 
 | Edge Case | Implementation |
+|------------|----------------|
+| Group entry | Each ByteTrack `track_id` generates an independent `ENTRY` event |
+| Staff movement | Uniform-color classifier marks `is_staff=true`; excluded from analytics |
+| Re-entry | Cosine similarity Re-ID within a 300-second window emits `REENTRY` |
+| Partial occlusion | Low-confidence detections are retained rather than discarded |
+| Billing queue | Queue depth computed from `BILLING_QUEUE_JOIN` events |
+| Empty store | Metrics safely return zero values without errors |
+| Camera overlap | Funnel stage capping prevents impossible stage counts |
 
-|---|---|
+---
 
-| Group entry | Each ByteTrack track\_id is independent — 3 people = 3 ENTRY events |
+# Architecture Decisions
 
-| Staff movement | HSV uniform color classifier; `is\_staff=true` excluded from all metrics |
+See:
 
-| Re-entry | Cosine similarity Re-ID within 300s window; emits REENTRY not second ENTRY |
-
-| Partial occlusion | Confidence passthrough — low-conf events emitted, never silently dropped |
-
-| Billing queue | Per-zone visitor set; `queue\_depth` on BILLING\_QUEUE\_JOIN events |
-
-| Empty store | Safe zero returns on all metrics; no nulls, no crashes |
-
-| Camera overlap | Funnel stage capping prevents impossible stage2 > stage1 counts |
-
-
-
-\---
-
-
-
-## Architecture Decisions
-
-
-
-See `docs/DESIGN.md` for full architecture and `docs/CHOICES.md` for the three
-
-key decisions: model selection, Re-ID strategy, and storage engine choice.
-
-
-
+- `docs/DESIGN.md` — Overall system architecture
+- `docs/CHOICES.md` — Design rationale covering:
+  - Model selection
+  - Re-identification strategy
+  - Storage engine choice
