@@ -151,8 +151,8 @@ docker compose exec api pytest tests/ -v
 
 Expected result:
 
-- ✅ 20 tests passing
-- ✅ >80% code coverage
+-  20 tests passing
+-  >80% code coverage
 
 ---
 
